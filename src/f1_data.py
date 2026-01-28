@@ -437,12 +437,19 @@ def get_race_telemetry(session, session_type='R'):
     }
 
 
+def _convert_time_to_seconds(time_val):
+    """Convert a pandas Timedelta to a string of total seconds, or None if NaT."""
+    if pd.isna(time_val):
+        return None
+    return str(time_val.total_seconds())
+
 def get_qualifying_results(session):
 
     # Extract the qualifying results and return a list of the drivers, their positions and their lap times in each qualifying segment
 
     results = session.results
 
+    driver_colors = get_driver_colors(session)
     qualifying_data = []
 
     for _, row in results.iterrows():
@@ -456,20 +463,14 @@ def get_qualifying_results(session):
         q3_time = row["Q3"]
         full_name = row["FullName"]
 
-        # Convert pandas Timedelta objects to seconds (or None if NaT)
-        def convert_time_to_seconds(time_val) -> str:
-            if pd.isna(time_val):
-                return None
-            return str(time_val.total_seconds())    
-
         qualifying_data.append({
             "code": driver_code,
             "full_name": full_name,
             "position": position,
-            "color": get_driver_colors(session).get(driver_code, (128,128,128)),
-            "Q1": convert_time_to_seconds(q1_time),
-            "Q2": convert_time_to_seconds(q2_time),
-            "Q3": convert_time_to_seconds(q3_time),
+            "color": driver_colors.get(driver_code, (128,128,128)),
+            "Q1": _convert_time_to_seconds(q1_time),
+            "Q2": _convert_time_to_seconds(q2_time),
+            "Q3": _convert_time_to_seconds(q3_time),
         })
     return qualifying_data
 

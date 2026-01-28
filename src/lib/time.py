@@ -1,5 +1,8 @@
 import re
+import logging
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 # convert time in seconds to a MM:SS.sss format
 
@@ -24,14 +27,14 @@ def parse_time_string(time_str: str) -> Optional[float]:
     time_str = str(time_str).split(" ", 2)[-1]  # Take the time part after "X days "
   else:
     time_str = str(time_str).split(" ")[0]  # Remove any trailing text after space
-    
+
   if time_str is None:
-    print('1parse_time_string output: None')
+    logger.debug("parse_time_string received None after splitting")
     return None
-  
+
   s = str(time_str).strip()
   if s == "":
-    print('2parse_time_string output: None')
+    logger.debug("parse_time_string received empty string")
     return None
 
   # Split on colon or dot
@@ -53,7 +56,7 @@ def parse_time_string(time_str: str) -> Optional[float]:
     elif len(parts) == 2:
       mm, ss = parts
     else:
-      print('3parse_time_string output: None')
+      logger.debug("parse_time_string: unexpected number of parts (%d) in '%s'", len(parts), s)
       return None
 
     hh = int(hh)
@@ -65,6 +68,5 @@ def parse_time_string(time_str: str) -> Optional[float]:
 
     return round(total_seconds, 3)
   except Exception as e:
-    print('Exception in parse_time_string:', e)
-    print('4parse_time_string output: None')
+    logger.debug("Exception in parse_time_string for input '%s': %s", time_str, e)
     return None
