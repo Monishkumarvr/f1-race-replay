@@ -137,8 +137,7 @@ Examples:
   python main.py --viewer --year 2024 --round 5  # Watch race replay
   python main.py --viewer --year 2024 --round 5 --qualifying  # Watch qualifying
   python main.py --viewer --year 2024 --round 5 --fp1  # Watch Free Practice 1
-  python main.py --viewer --year 2024 --round 5 --fp2  # Watch Free Practice 2
-  python main.py --viewer --year 2024 --round 5 --fp3  # Watch Free Practice 3
+  python main.py --strategy --year 2024 --round 5  # Show race strategy analysis
         """,
     )
 
@@ -155,6 +154,10 @@ Examples:
     )
     mode_group.add_argument(
         "--list-sprints", action="store_true", help="List sprint rounds for the given year"
+    )
+    mode_group.add_argument(
+        "--strategy", action="store_true",
+        help="Show post-race strategy analysis (pit stops, tyre usage)"
     )
 
     # Common options
@@ -212,6 +215,21 @@ if __name__ == "__main__":
 
     if args.list_sprints:
         list_sprints(args.year)
+        sys.exit(0)
+
+    if args.strategy:
+        from src.analysis.strategy import analyze_race_strategy, format_strategy_report
+
+        print(f"Loading race data for {args.year} Round {args.round_number}...")
+        enable_cache()
+        session = load_session(args.year, args.round_number, 'R')
+        event_name = session.event.get('EventName', '')
+
+        print(f"Analyzing strategy for {event_name}...")
+        strategies = analyze_race_strategy(session)
+
+        report = format_strategy_report(strategies, event_name)
+        print(report)
         sys.exit(0)
 
     if args.viewer:
