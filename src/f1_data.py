@@ -209,10 +209,22 @@ def get_circuit_rotation(session):
     circuit = session.get_circuit_info()
     return circuit.rotation
 
+def _get_cache_suffix(session_type: str) -> str:
+    """Get cache file suffix for a given session type."""
+    suffixes = {
+        'R': 'race',
+        'S': 'sprint',
+        'FP1': 'fp1',
+        'FP2': 'fp2',
+        'FP3': 'fp3',
+    }
+    return suffixes.get(session_type, 'race')
+
+
 def get_race_telemetry(session, session_type='R'):
 
     event_name = str(session).replace(' ', '_')
-    cache_suffix = 'sprint' if session_type == 'S' else 'race'
+    cache_suffix = _get_cache_suffix(session_type)
 
     # Check if this data has already been computed
 

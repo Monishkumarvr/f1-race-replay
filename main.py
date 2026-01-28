@@ -16,6 +16,21 @@ from src.cli.race_selection import cli_load
 from src.gui.race_selection import RaceSelectionWindow
 from PySide6.QtWidgets import QApplication
 
+
+def _get_session_title(session_type: str) -> str:
+    """Get display title for a session type."""
+    titles = {
+        'R': 'Race',
+        'S': 'Sprint',
+        'Q': 'Qualifying',
+        'SQ': 'Sprint Qualifying',
+        'FP1': 'Free Practice 1',
+        'FP2': 'Free Practice 2',
+        'FP3': 'Free Practice 3',
+    }
+    return titles.get(session_type, 'Race')
+
+
 def main(year=None, round_number=None, playback_speed=1, session_type='R', visible_hud=True, ready_file=None):
   print(f"Loading F1 {year} Round {round_number} Session '{session_type}'")
   session = load_session(year, round_number, session_type)
@@ -101,7 +116,7 @@ def main(year=None, round_number=None, playback_speed=1, session_type='R', visib
       drivers=drivers,
       playback_speed=playback_speed,
       driver_colors=race_telemetry['driver_colors'],
-      title=f"{session.event['EventName']} - {'Sprint' if session_type == 'S' else 'Race'}",
+      title=f"{session.event['EventName']} - {_get_session_title(session_type)}",
       total_laps=race_telemetry['total_laps'],
       circuit_rotation=circuit_rotation,
       visible_hud=visible_hud,
@@ -121,6 +136,9 @@ Examples:
   python main.py --list-rounds --year 2024 # List all rounds for 2024
   python main.py --viewer --year 2024 --round 5  # Watch race replay
   python main.py --viewer --year 2024 --round 5 --qualifying  # Watch qualifying
+  python main.py --viewer --year 2024 --round 5 --fp1  # Watch Free Practice 1
+  python main.py --viewer --year 2024 --round 5 --fp2  # Watch Free Practice 2
+  python main.py --viewer --year 2024 --round 5 --fp3  # Watch Free Practice 3
         """,
     )
 
@@ -161,6 +179,15 @@ Examples:
         "--sprint-qualifying", "-SQ", action="store_true",
         help="Show sprint qualifying session"
     )
+    session_type.add_argument(
+        "--fp1", action="store_true", help="Show Free Practice 1 session"
+    )
+    session_type.add_argument(
+        "--fp2", action="store_true", help="Show Free Practice 2 session"
+    )
+    session_type.add_argument(
+        "--fp3", action="store_true", help="Show Free Practice 3 session"
+    )
     viewer_group.add_argument(
         "--no-hud", action="store_true", help="Hide the HUD overlay"
     )
@@ -195,6 +222,12 @@ if __name__ == "__main__":
             session_type = "S"
         elif args.qualifying:
             session_type = "Q"
+        elif args.fp1:
+            session_type = "FP1"
+        elif args.fp2:
+            session_type = "FP2"
+        elif args.fp3:
+            session_type = "FP3"
         else:
             session_type = "R"
 

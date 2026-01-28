@@ -165,11 +165,12 @@ class RaceSelectionWindow(QMainWindow):
             pass
         # determine sessions to show
         ev_type = (ev.get('type') or '').lower()
-        sessions = ["Qualifying", "Race"]
+        # Always show practice sessions first, then qualifying, then race
+        sessions = ["FP1", "FP2", "FP3", "Qualifying", "Race"]
         if 'sprint' in ev_type:
-            sessions.insert(0, "Sprint Qualifying")
-            # show sprint-related session
-            sessions.insert(2, "Sprint")
+            # Sprint weekends have different schedule: FP1, Qualifying, FP2 (optional), Sprint Qualifying, Sprint, Race
+            # Simplified: show all available sessions
+            sessions = ["FP1", "Sprint Qualifying", "Sprint", "Qualifying", "Race"]
 
         # clear existing session widgets
         for i in reversed(range(self.session_list_layout.count())):
@@ -208,6 +209,12 @@ class RaceSelectionWindow(QMainWindow):
             flag = "--sprint-qualifying"
         elif session_label == "Sprint":
             flag = "--sprint"
+        elif session_label == "FP1":
+            flag = "--fp1"
+        elif session_label == "FP2":
+            flag = "--fp2"
+        elif session_label == "FP3":
+            flag = "--fp3"
 
         main_path = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'main.py'))
         cmd = [sys.executable, main_path, "--viewer"]
@@ -229,13 +236,16 @@ class RaceSelectionWindow(QMainWindow):
         QApplication.processEvents()
 
         # Map label -> fastf1 session type code
-        session_code = 'R'
-        if session_label == "Qualifying":
-            session_code = 'Q'
-        elif session_label == "Sprint Qualifying":
-            session_code = 'SQ'
-        elif session_label == "Sprint":
-            session_code = 'S'
+        session_codes = {
+            "Race": "R",
+            "Qualifying": "Q",
+            "Sprint Qualifying": "SQ",
+            "Sprint": "S",
+            "FP1": "FP1",
+            "FP2": "FP2",
+            "FP3": "FP3",
+        }
+        session_code = session_codes.get(session_label, "R")
 
         class FetchSessionWorker(QThread):
             result = Signal(object)
