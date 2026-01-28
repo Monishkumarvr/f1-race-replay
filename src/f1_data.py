@@ -382,14 +382,15 @@ def get_race_telemetry(session, session_type='R'):
         leader = snapshot[0]
         leader_lap = leader["lap"]
 
-        # 5c. Compute gap to car in front in SECONDS
+        # 5c. Compute gaps (to car ahead and to leader) in SECONDS
         frame_data = {}
+        leader_car = snapshot[0] if snapshot else None
 
         for idx, car in enumerate(snapshot):
             code = car["code"]
             position = idx + 1
 
-            # Calculate gap to car ahead
+            # Calculate gap to car ahead (interval)
             gap_ahead = None
             laps_behind = 0
             if idx > 0:
@@ -406,6 +407,18 @@ def get_race_telemetry(session, session_type='R'):
                     speed_ms = car["speed"] / 3.6 if car["speed"] > 0 else 50.0  # fallback 50 m/s
                     gap_ahead = round(dist_diff / speed_ms, 3) if speed_ms > 0 else None
 
+            # Calculate gap to leader
+            gap_to_leader = None
+            laps_behind_leader = 0
+            if idx > 0 and leader_car:
+                leader_lap_diff = leader_car["lap"] - car["lap"]
+                if leader_lap_diff > 0:
+                    laps_behind_leader = leader_lap_diff
+                else:
+                    dist_to_leader = leader_car["dist"] - car["dist"]
+                    speed_ms = car["speed"] / 3.6 if car["speed"] > 0 else 50.0
+                    gap_to_leader = round(dist_to_leader / speed_ms, 3) if speed_ms > 0 else None
+
             # include speed, gear, drs_active in frame driver dict
             frame_data[code] = {
                 "x": car["x"],
@@ -421,7 +434,9 @@ def get_race_telemetry(session, session_type='R'):
                 "throttle": car['throttle'],
                 "brake": car['brake'],
                 "gap": gap_ahead,
+                "gap_to_leader": gap_to_leader,
                 "laps_behind": laps_behind,
+                "laps_behind_leader": laps_behind_leader,
             }
 
         weather_snapshot = {}
