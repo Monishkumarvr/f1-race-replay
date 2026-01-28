@@ -2,7 +2,6 @@ import os
 import sys
 import fastf1
 import fastf1.plotting
-from multiprocessing import Pool, cpu_count
 import numpy as np
 import json
 import pickle
@@ -253,15 +252,16 @@ def get_race_telemetry(session, session_type='R'):
     
     max_lap_number = 0
 
-    # 1. Get all of the drivers telemetry data using multiprocessing
-    # Prepare arguments for parallel processing
-    logger.info("Processing %d drivers in parallel...", len(drivers))
-    driver_args = [(driver_no, session, driver_codes[driver_no]) for driver_no in drivers]
+    # 1. Get all of the drivers telemetry data
+    # NOTE: We use sequential processing instead of multiprocessing because
+    # the FastF1 session object is too large to pickle efficiently for IPC.
+    # Attempting to use pool.map with the session causes MemoryError.
+    logger.info("Processing %d drivers sequentially...", len(drivers))
     
-    num_processes = min(cpu_count(), len(drivers))
-    
-    with Pool(processes=num_processes) as pool:
-        results = pool.map(_process_single_driver, driver_args)
+    results = []
+    for driver_no in drivers:
+        result = _process_single_driver((driver_no, session, driver_codes[driver_no]))
+        results.append(result)
     
     # Process results
     for result in results:
@@ -844,14 +844,16 @@ def get_quali_telemetry(session, session_type='Q'):
 
     telemetry_data = {}
 
-    driver_args = [(session, driver_codes[driver_no]) for driver_no in session.drivers]
-
-    logger.info("Processing %d drivers in parallel...", len(session.drivers))
+    # NOTE: We use sequential processing here instead of multiprocessing because
+    # the FastF1 session object is too large to pickle efficiently for IPC.
+    # Attempting to use pool.map with the session causes MemoryError.
+    logger.info("Processing %d drivers sequentially...", len(session.drivers))
     
-    num_processes = min(cpu_count(), len(session.drivers))
-    
-    with Pool(processes=num_processes) as pool:
-        results = pool.map(_process_quali_driver, driver_args)
+    results = []
+    for driver_no in session.drivers:
+        driver_code = driver_codes[driver_no]
+        result = _process_quali_driver((session, driver_code))
+        results.append(result)
     for result in results:
         driver_code = result["driver_code"]
         telemetry_data[driver_code] = {
