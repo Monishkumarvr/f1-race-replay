@@ -82,7 +82,7 @@ def _process_single_driver(args):
     """Process telemetry data for a single driver - must be top-level for multiprocessing"""
     driver_no, session, driver_code = args
     
-    print(f"Getting telemetry for driver: {driver_code}")
+    logger.debug("Getting telemetry for driver: %s", driver_code)
 
     laps_driver = session.laps.pick_drivers(driver_no)
     if laps_driver.empty:
@@ -163,7 +163,7 @@ def _process_single_driver(args):
     throttle_all = np.concatenate(throttle_all)[order]
     brake_all = np.concatenate(brake_all)[order]
 
-    print(f"Completed telemetry for driver: {driver_code}")
+    logger.debug("Completed telemetry for driver: %s", driver_code)
     
     return {
         "code": driver_code,
@@ -220,8 +220,8 @@ def get_race_telemetry(session, session_type='R'):
         if "--refresh-data" not in sys.argv:
             with open(f"computed_data/{event_name}_{cache_suffix}_telemetry.pkl", "rb") as f:
                 frames = pickle.load(f)
-                print(f"Loaded precomputed {cache_suffix} telemetry data.")
-                print("The replay should begin in a new window shortly!")
+                logger.info("Loaded precomputed %s telemetry data.", cache_suffix)
+                logger.info("The replay should begin in a new window shortly!")
                 return frames
     except FileNotFoundError:
         pass  # Need to compute from scratch
@@ -243,7 +243,7 @@ def get_race_telemetry(session, session_type='R'):
 
     # 1. Get all of the drivers telemetry data using multiprocessing
     # Prepare arguments for parallel processing
-    print(f"Processing {len(drivers)} drivers in parallel...")
+    logger.info("Processing %d drivers in parallel...", len(drivers))
     driver_args = [(driver_no, session, driver_codes[driver_no]) for driver_no in drivers]
     
     num_processes = min(cpu_count(), len(drivers))
@@ -421,7 +421,7 @@ def get_race_telemetry(session, session_type='R'):
                     "rain_state": "RAINING" if rain_val and rain_val >= 0.5 else "DRY",
                 }
             except Exception as e:
-                print(f"Failed to attach weather data to frame {i}: {e}")
+                logger.warning("Failed to attach weather data to frame %d: %s", i, e)
 
         frame_payload = {
             "t": round(t, 3),
@@ -432,8 +432,8 @@ def get_race_telemetry(session, session_type='R'):
             frame_payload["weather"] = weather_snapshot
 
         frames.append(frame_payload)
-    print("completed telemetry extraction...")
-    print("Saving to cache file...")
+    logger.info("Completed telemetry extraction...")
+    logger.info("Saving to cache file...")
     # If computed_data/ directory doesn't exist, create it
     if not os.path.exists("computed_data"):
         os.makedirs("computed_data")
@@ -447,8 +447,8 @@ def get_race_telemetry(session, session_type='R'):
             "total_laps": int(max_lap_number),
         }, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-    print("Saved Successfully!")
-    print("The replay should begin in a new window shortly")
+    logger.info("Saved Successfully!")
+    logger.info("The replay should begin in a new window shortly")
     return {
         "frames": frames,
         "driver_colors": get_driver_colors(session),
@@ -659,7 +659,7 @@ def get_driver_quali_telemetry(session, driver_code: str, quali_segment: str):
                     "rain_state": "RAINING" if rain_val and rain_val >= 0.5 else "DRY",
                 }
             except Exception as e:
-                print(f"Failed to attach weather data to frame {i}: {e}")
+                logger.warning("Failed to attach weather data to frame %d: %s", i, e)
 
         # Check if drs has changed from the previous frame
 
@@ -724,7 +724,7 @@ def get_driver_quali_telemetry(session, driver_code: str, quali_segment: str):
 def _process_quali_driver(args):
     """Process qualifying telemetry data for a single driver - must be top-level for multiprocessing"""
     session, driver_code = args
-    print(f"Getting qualifying telemetry for driver: {driver_code}")
+    logger.debug("Getting qualifying telemetry for driver: %s", driver_code)
 
     driver_telemetry_data = {}
 
@@ -745,7 +745,8 @@ def _process_quali_driver(args):
         except ValueError:
             driver_telemetry_data[segment] = {"frames": [], "track_statuses": []}
 
-    print(f"Finished processing qualifying telemetry for driver: {driver_code}, {session.get_driver(driver_code)['FullName']},")
+    logger.debug("Finished processing qualifying telemetry for driver: %s (%s)",
+                 driver_code, session.get_driver(driver_code)['FullName'])
     return {
         "driver_code": driver_code,
         "driver_full_name": session.get_driver(driver_code)["FullName"],
@@ -779,8 +780,8 @@ def get_quali_telemetry(session, session_type='Q'):
         if "--refresh-data" not in sys.argv:
             with open(f"computed_data/{event_name}_{cache_suffix}_telemetry.pkl", "rb") as f:
                 data = pickle.load(f)
-                print(f"Loaded precomputed {cache_suffix} telemetry data.")
-                print("The replay should begin in a new window shortly!")
+                logger.info("Loaded precomputed %s telemetry data.", cache_suffix)
+                logger.info("The replay should begin in a new window shortly!")
                 return data
     except FileNotFoundError:
         pass  # Need to compute from scratch
@@ -801,7 +802,7 @@ def get_quali_telemetry(session, session_type='Q'):
 
     driver_args = [(session, driver_codes[driver_no]) for driver_no in session.drivers]
 
-    print(f"Processing {len(session.drivers)} drivers in parallel...")
+    logger.info("Processing %d drivers in parallel...", len(session.drivers))
     
     num_processes = min(cpu_count(), len(session.drivers))
     
