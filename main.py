@@ -1,8 +1,17 @@
-from src.f1_data import get_race_telemetry, enable_cache, get_circuit_rotation, load_session, get_quali_telemetry, list_rounds, list_sprints
-from src.arcade_replay import run_arcade_replay
-
-from src.interfaces.qualifying import run_qualifying_replay
+import argparse
 import sys
+
+from src.f1_data import (
+    get_race_telemetry,
+    enable_cache,
+    get_circuit_rotation,
+    load_session,
+    get_quali_telemetry,
+    list_rounds,
+    list_sprints,
+)
+from src.arcade_replay import run_arcade_replay
+from src.interfaces.qualifying import run_qualifying_replay
 from src.cli.race_selection import cli_load
 from src.gui.race_selection import RaceSelectionWindow
 from PySide6.QtWidgets import QApplication
@@ -100,55 +109,107 @@ def main(year=None, round_number=None, playback_speed=1, session_type='R', visib
       session_info=session_info
     )
 
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(
+        description="F1 Race Replay - Visualize Formula 1 race telemetry",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python main.py                           # Launch GUI
+  python main.py --cli                     # Launch interactive CLI
+  python main.py --list-rounds --year 2024 # List all rounds for 2024
+  python main.py --viewer --year 2024 --round 5  # Watch race replay
+  python main.py --viewer --year 2024 --round 5 --qualifying  # Watch qualifying
+        """,
+    )
+
+    # Mode selection (mutually exclusive)
+    mode_group = parser.add_mutually_exclusive_group()
+    mode_group.add_argument(
+        "--cli", action="store_true", help="Run interactive CLI mode"
+    )
+    mode_group.add_argument(
+        "--viewer", action="store_true", help="Run replay viewer directly"
+    )
+    mode_group.add_argument(
+        "--list-rounds", action="store_true", help="List all rounds for the given year"
+    )
+    mode_group.add_argument(
+        "--list-sprints", action="store_true", help="List sprint rounds for the given year"
+    )
+
+    # Common options
+    parser.add_argument(
+        "--year", type=int, default=2025, help="F1 season year (default: 2025)"
+    )
+    parser.add_argument(
+        "--round", type=int, default=12, dest="round_number",
+        help="Round number (default: 12)"
+    )
+
+    # Viewer-specific options
+    viewer_group = parser.add_argument_group("Viewer options (use with --viewer)")
+    session_type = viewer_group.add_mutually_exclusive_group()
+    session_type.add_argument(
+        "--qualifying", "-Q", action="store_true", help="Show qualifying session"
+    )
+    session_type.add_argument(
+        "--sprint", "-S", action="store_true", help="Show sprint race"
+    )
+    session_type.add_argument(
+        "--sprint-qualifying", "-SQ", action="store_true",
+        help="Show sprint qualifying session"
+    )
+    viewer_group.add_argument(
+        "--no-hud", action="store_true", help="Hide the HUD overlay"
+    )
+    viewer_group.add_argument(
+        "--ready-file", type=str, metavar="PATH",
+        help="Path to file signaling ready state (used by GUI)"
+    )
+
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = parse_args()
 
-  if "--cli" in sys.argv:
-    # Run the CLI
+    if args.cli:
+        cli_load()
+        sys.exit(0)
 
-    cli_load()
-    sys.exit(0)
+    if args.list_rounds:
+        list_rounds(args.year)
+        sys.exit(0)
 
-  if "--year" in sys.argv:
-    year_index = sys.argv.index("--year") + 1
-    year = int(sys.argv[year_index])
-  else:
-    year = 2025  # Default year
+    if args.list_sprints:
+        list_sprints(args.year)
+        sys.exit(0)
 
-  if "--round" in sys.argv:
-    round_index = sys.argv.index("--round") + 1
-    round_number = int(sys.argv[round_index])
-  else:
-    round_number = 12  # Default round number
+    if args.viewer:
+        # Determine session type
+        if args.sprint_qualifying:
+            session_type = "SQ"
+        elif args.sprint:
+            session_type = "S"
+        elif args.qualifying:
+            session_type = "Q"
+        else:
+            session_type = "R"
 
-  if "--list-rounds" in sys.argv:
-    list_rounds(year)
-  elif "--list-sprints" in sys.argv:
-    list_sprints(year)
-  else:
-    playback_speed = 1
+        main(
+            year=args.year,
+            round_number=args.round_number,
+            playback_speed=1,
+            session_type=session_type,
+            visible_hud=not args.no_hud,
+            ready_file=args.ready_file,
+        )
+        sys.exit(0)
 
-  if "--viewer" in sys.argv:
-  
-    visible_hud = True
-    if "--no-hud" in sys.argv:
-      visible_hud = False
-
-    # Session type selection
-    session_type = 'SQ' if "--sprint-qualifying" in sys.argv else ('S' if "--sprint" in sys.argv else ('Q' if "--qualifying" in sys.argv else 'R'))
-
-    # Optional ready-file path used when spawned from the GUI to signal ready state
-    ready_file = None
-    if "--ready-file" in sys.argv:
-      idx = sys.argv.index("--ready-file") + 1
-      if idx < len(sys.argv):
-        ready_file = sys.argv[idx]
-
-    main(year, round_number, playback_speed, session_type=session_type, visible_hud=visible_hud, ready_file=ready_file)
-    sys.exit(0)
-
-  # Run the GUI
-
-  app = QApplication(sys.argv)
-  win = RaceSelectionWindow()
-  win.show()
-  sys.exit(app.exec())
+    # Default: Run the GUI
+    app = QApplication(sys.argv)
+    win = RaceSelectionWindow()
+    win.show()
+    sys.exit(app.exec())
