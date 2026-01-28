@@ -382,8 +382,6 @@ def get_race_telemetry(session, session_type='R'):
         leader = snapshot[0]
         leader_lap = leader["lap"]
 
-        # TODO: This 5c. step seems futile currently as we are not using gaps anywhere, and it doesn't even comput the gaps. I think I left this in when removing the "gaps" feature that was half-finished during the initial development.
-
         # 5c. Compute gap to car in front in SECONDS
         frame_data = {}
 
@@ -391,11 +389,28 @@ def get_race_telemetry(session, session_type='R'):
             code = car["code"]
             position = idx + 1
 
+            # Calculate gap to car ahead
+            gap_ahead = None
+            laps_behind = 0
+            if idx > 0:
+                car_ahead = snapshot[idx - 1]
+                lap_diff = car_ahead["lap"] - car["lap"]
+                if lap_diff > 0:
+                    # Car is lapped - show laps behind
+                    laps_behind = lap_diff
+                else:
+                    # Same lap - compute time gap based on distance difference
+                    dist_diff = car_ahead["dist"] - car["dist"]
+                    # Use current car's speed to estimate time gap (in seconds)
+                    # Speed is in km/h, distance in meters
+                    speed_ms = car["speed"] / 3.6 if car["speed"] > 0 else 50.0  # fallback 50 m/s
+                    gap_ahead = round(dist_diff / speed_ms, 3) if speed_ms > 0 else None
+
             # include speed, gear, drs_active in frame driver dict
             frame_data[code] = {
                 "x": car["x"],
                 "y": car["y"],
-                "dist": car["dist"],    
+                "dist": car["dist"],
                 "lap": car["lap"],
                 "rel_dist": round(car["rel_dist"], 4),
                 "tyre": car["tyre"],
@@ -405,6 +420,8 @@ def get_race_telemetry(session, session_type='R'):
                 "drs": car['drs'],
                 "throttle": car['throttle'],
                 "brake": car['brake'],
+                "gap": gap_ahead,
+                "laps_behind": laps_behind,
             }
 
         weather_snapshot = {}
